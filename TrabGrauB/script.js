@@ -77,49 +77,52 @@ function hammingDecode(codeword) {
 }
 
 
-const CRC_POLY = '10011'; // x^4 + x + 1
+const CRC_POLY = '10011'; // Polinômio gerador x^4 + x + 1
 
+// XOR bit a bit entre duas strings binárias 
 function xor(a, b) {
   let result = '';
-  for (let i = 1; i < b.length; i++) {
+  for (let i = 0; i < b.length; i++) {
     result += a[i] === b[i] ? '0' : '1';
   }
   return result;
 }
 
-// Calcula CRC para um codeword binário (entrada como string de bits)
+// Codifica os dados adicionando o CRC (resto da divisão polinomial)
 function crcEncode(data) {
-  let appendedData = data + '0000'; // acrescenta zeros para grau 4
-  let remainder = appendedData.substr(0, 5);
+  const degree = CRC_POLY.length - 1; // grau do polinômio (4)
+  let appendedData = data + '0'.repeat(degree); // acrescenta zeros para o grau do polinômio
+  let remainder = appendedData.substr(0, CRC_POLY.length);
 
-  for (let i = 5; i <= appendedData.length; i++) {
+  for (let i = CRC_POLY.length; i <= appendedData.length; i++) {
     if (remainder[0] === '1') {
       remainder = xor(CRC_POLY, remainder) + (i < appendedData.length ? appendedData[i] : '');
     } else {
-      remainder = xor('00000', remainder) + (i < appendedData.length ? appendedData[i] : '');
+      remainder = xor('0'.repeat(CRC_POLY.length), remainder) + (i < appendedData.length ? appendedData[i] : '');
     }
     remainder = remainder.substr(1);
   }
+
   return data + remainder;
 }
 
-// Verifica CRC - retorna true se correto
+// Verifica se o codeword (dados + CRC) está correto (retorna true se válido)
 function crcCheck(codeword) {
-  let remainder = codeword.substr(0, 5);
+  let remainder = codeword.substr(0, CRC_POLY.length);
 
-  for (let i = 5; i <= codeword.length; i++) {
+  for (let i = CRC_POLY.length; i < codeword.length; i++) {
     if (remainder[0] === '1') {
-      remainder = xor(CRC_POLY, remainder) + (i < codeword.length ? codeword[i] : '');
+      remainder = xor(CRC_POLY, remainder) + codeword[i];
     } else {
-      remainder = xor('00000', remainder) + (i < codeword.length ? codeword[i] : '');
+      remainder = xor('0'.repeat(CRC_POLY.length), remainder) + codeword[i];
     }
     remainder = remainder.substr(1);
   }
-  // Se o resto for zero, código está correto
+
+  // Código válido se o resto é todo zero
   return !remainder.includes('1');
 }
-
-// --- Inserção de erro no código (inverte bit na posição dada, index 1-based) ---
+// --- Inserção de erro no código  ---
 function insertError(codeword, position) {
   if (!position || position < 1 || position > codeword.length) return codeword;
   const index = position - 1;
@@ -128,7 +131,7 @@ function insertError(codeword, position) {
   return bits.join('');
 }
 
-// --- Funções para manipular input e output ---
+// --- Funções  input e output ---
 
 function encode() {
   const input = document.getElementById('inputText').value.trim();
@@ -165,14 +168,14 @@ function encode() {
     }
     output = `Codificado (repetition): ${encoded}`;
   } else if (method === 'crc') {
-    // Para CRC, consideramos o input já em binário ou convertemos
+    // Para CRC,  o input já em binário ou convertemos
     // Se input contém só 0 e 1, assumimos binário; senão convertemos
     const bin = /^[01]+$/.test(input) ? input : textToBinary(input).replace(/ /g, '');
     let encoded = crcEncode(bin);
     if (!isNaN(errorPos)) {
       encoded = insertError(encoded, errorPos);
     }
-    output = `Entrada binária: ${bin}\nCodificado (CRC): ${encoded}`;
+    output = `Entrada binária:\nCodificado (CRC): ${encoded}`;
   }
 
   document.getElementById('output').textContent = output;
